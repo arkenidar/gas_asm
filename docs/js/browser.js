@@ -52,13 +52,17 @@
     '<nav class="sidebar">' +
       '<div class="siblings"></div>' +
       '<h1></h1>' +
-      '<ul></ul>' +
+      '<ul class="docs-list"></ul>' +
+      '<h1 class="sources-title" hidden></h1>' +
+      '<ul class="sources-list"></ul>' +
     '</nav>' +
     '<main class="content"><p class="status">Loading…</p></main>';
   document.body.appendChild(app);
 
   const sidebarTitle = app.querySelector(".sidebar h1");
-  const sidebarList  = app.querySelector(".sidebar ul");
+  const sidebarList  = app.querySelector(".sidebar .docs-list");
+  const sourcesTitle = app.querySelector(".sidebar .sources-title");
+  const sourcesList  = app.querySelector(".sidebar .sources-list");
   const siblingsBox  = app.querySelector(".sidebar .siblings");
   const content      = app.querySelector(".content");
 
@@ -82,6 +86,24 @@
     sidebarList.appendChild(li);
   });
 
+  // Optional second section: raw source files (rendered as highlighted code).
+  const sources = cfg.sources || [];
+  const sourcesByName = {};
+  if (sources.length) {
+    sourcesTitle.textContent = cfg.sourcesTitle || "Sources";
+    sourcesTitle.hidden = false;
+    sources.forEach(function (s) {
+      sourcesByName[s.name] = s;
+      const li = document.createElement("li");
+      const a  = document.createElement("a");
+      a.href = "#" + encodeURIComponent(s.name);
+      a.textContent = s.name;
+      a.dataset.file = s.name;
+      li.appendChild(a);
+      sourcesList.appendChild(li);
+    });
+  }
+
   // --- routing -----------------------------------------------------------
 
   function currentFile() {
@@ -92,8 +114,14 @@
   }
 
   function markActive(file) {
-    sidebarList.querySelectorAll("a").forEach(function (a) {
+    app.querySelectorAll(".sidebar a[data-file]").forEach(function (a) {
       a.classList.toggle("active", a.dataset.file === file);
+    });
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>]/g, function (c) {
+      return c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;";
     });
   }
 
@@ -102,6 +130,7 @@
   //  - everything else is left alone (external links, anchors, code paths)
   function rewriteLinks(root) {
     const known = new Set(cfg.files);
+    sources.forEach(function (s) { known.add(s.name); });
     root.querySelectorAll("a[href]").forEach(function (a) {
       const href = a.getAttribute("href");
       if (!href) return;
@@ -110,12 +139,16 @@
 
       // strip optional ./ prefix and trailing #fragment for matching
       const [path, frag] = href.split("#");
-      const clean = path.replace(/^\.\//, "");
+      const clean    = path.replace(/^\.\//, "");
+      const basename = clean.split("/").pop();
+      const match = known.has(clean) ? clean
+                  : known.has(basename) ? basename
+                  : null;
 
-      if (known.has(clean)) {
+      if (match) {
         a.setAttribute(
           "href",
-          "#" + encodeURIComponent(clean) + (frag ? "#" + frag : "")
+          "#" + encodeURIComponent(match) + (frag ? "#" + frag : "")
         );
       }
       // Links to files outside cfg.files (e.g. ../../main.c) are left
@@ -126,11 +159,21 @@
   async function load(file) {
     markActive(file);
     content.innerHTML = '<p class="status">Loading ' + file + '…</p>';
+    const source = sourcesByName[file];
+    const baseDir = source ? (cfg.sourcesDir || "../") : cfg.baseDir;
     try {
-      const res = await fetch(cfg.baseDir + file, { cache: "no-cache" });
+      const res = await fetch(baseDir + file, { cache: "no-cache" });
       if (!res.ok) throw new Error("HTTP " + res.status);
-      const md = await res.text();
-      content.innerHTML = marked.parse(md);
+      const text = await res.text();
+      if (source) {
+        const lang = source.lang || "";
+        content.innerHTML =
+          '<h1><code>' + escapeHtml(file) + '</code></h1>' +
+          '<pre><code class="language-' + lang + '">' +
+          escapeHtml(text) + '</code></pre>';
+      } else {
+        content.innerHTML = marked.parse(text);
+      }
       rewriteLinks(content);
       if (window.hljs) {
         content.querySelectorAll("pre code").forEach(function (block) {
