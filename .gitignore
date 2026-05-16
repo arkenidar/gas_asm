@@ -1,0 +1,20 @@
+# Build artifacts
+*.o
+*.obj
+*.exe
+*.out
+
+# Linux ELF executables (no extension)
+fizzbuzz
+fizzbuzz-main
+fizzbuzz-main-as
+
+# Build outputs from the self-contained "-main" .s variants
+# (these inline a main() so they work standalone in SASM, etc.):
+#
+#   fizzbuzz-main     — built with gcc as both assembler and linker
+#                       e.g.  gcc fizzbuzz-abi-intel64-unix-main.s -o fizzbuzz-main
+#
+#   fizzbuzz-main-as  — assembled with GNU as, then linked with gcc
+#                       e.g.  as  fizzbuzz-abi-intel64-unix-main.s -o fizzbuzz-main.o
+#                             gcc fizzbuzz-main.o -o fizzbuzz-main-as

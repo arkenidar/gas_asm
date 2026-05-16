@@ -1,0 +1,87 @@
+# fizzbuzz-abi-intel64-unix.s
+
+# fizzbuzz.s — x86-64 System V ABI (Linux) / also works on MinGW-w64 with
+# minor tweaks noted below.  Intel syntax.
+#
+# Exposes: void fizzbuzz(int n);
+# Prints FizzBuzz for i in 1..n.
+
+        .intel_syntax noprefix
+        .text
+
+        .section .rodata
+fmt_num:    .asciz "%d"
+str_fizz:   .asciz "Fizz"
+str_buzz:   .asciz "Buzz"
+str_empty:  .asciz ""
+
+        .text
+        .globl  fizzbuzz
+fizzbuzz:
+        # Prologue: save callee-saved registers we'll use.
+        # System V AMD64 callee-saved: rbx, rbp, r12-r15.
+        push    rbp
+        mov     rbp, rsp
+        push    rbx                 # rbx = out flag
+        push    r12                 # r12 = i
+        push    r13                 # r13 = n (saved copy of arg)
+        sub     rsp, 8              # keep 16-byte stack alignment before calls
+
+        mov     r13d, edi           # n arrived in edi (1st int arg, SysV)
+        mov     r12d, 1             # i = 1
+
+.Lloop:
+        cmp     r12d, r13d
+        jg      .Ldone
+
+        xor     ebx, ebx            # out = 0
+
+        # --- if (i % 3 == 0) printf("Fizz"); out = 1; ---
+        mov     eax, r12d
+        cdq                         # sign-extend eax into edx
+        mov     ecx, 3
+        idiv    ecx                 # eax = i/3, edx = i%3
+        test    edx, edx
+        jnz     .Lskip_fizz
+        lea     rdi, [rip + str_fizz]
+        xor     eax, eax            # 0 vector regs used (required by SysV varargs)
+        call    printf
+        mov     ebx, 1
+.Lskip_fizz:
+
+        # --- if (i % 5 == 0) printf("Buzz"); out = 1; ---
+        mov     eax, r12d
+        cdq
+        mov     ecx, 5
+        idiv    ecx
+        test    edx, edx
+        jnz     .Lskip_buzz
+        lea     rdi, [rip + str_buzz]
+        xor     eax, eax
+        call    printf
+        mov     ebx, 1
+.Lskip_buzz:
+
+        # --- if (out == 0) printf("%d", i); ---
+        test    ebx, ebx
+        jnz     .Lskip_num
+        lea     rdi, [rip + fmt_num]
+        mov     esi, r12d           # 2nd arg: i
+        xor     eax, eax
+        call    printf
+.Lskip_num:
+
+        # --- puts("") -> newline ---
+        lea     rdi, [rip + str_empty]
+        call    puts
+
+        inc     r12d
+        jmp     .Lloop
+
+.Ldone:
+        add     rsp, 8
+        pop     r13
+        pop     r12
+        pop     rbx
+        pop     rbp
+        ret
