@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build-fizzbuzz-debug",
+            "type": "process",
+            "command": "C:\\msys64\\mingw64\\bin\\gcc.exe",
+            "args": [
+                "-g",
+                "-o",
+                "${workspaceFolder}\\fizzbuzz.exe",
+                "${workspaceFolder}\\fizzbuzz-abi-intel64-mingw-main.s"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}
