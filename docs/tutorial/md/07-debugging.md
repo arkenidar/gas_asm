@@ -26,6 +26,14 @@ For the self-contained variant:
 gcc -g fizzbuzz-abi-intel64-unix-main.s -o fizzbuzz-main
 ```
 
+## VS Code: allow breakpoints in assembly files
+
+If VS Code refuses to place breakpoints in `.s` files, open
+Settings -> Debug and set `debug.allowBreakpointsEverywhere` to `true`.
+
+This repo also enables that setting in the workspace so assembly
+breakpoints work out of the box.
+
 ## Tell `gdb` to use Intel syntax
 
 The repo's `.s` files are Intel-syntax; by default `gdb` disassembles
@@ -56,16 +64,16 @@ Inside `gdb`:
 
 Key commands you'll reach for:
 
-| Command | What it does |
-|---|---|
-| `si` / `ni` | step **one instruction**; `ni` steps over `call`s |
-| `s` / `n` | step by **source line** (works with `-g`) |
-| `info registers` | all general-purpose registers |
-| `p/x $reg` | print one register in hex (`/d` decimal, `/t` binary) |
-| `x/<n><fmt> addr` | examine memory — e.g. `x/8gx $rsp` (8 giant hex) |
-| `disas` / `disas fizzbuzz` | disassemble current frame / a function |
-| `bt` | backtrace |
-| `layout regs` / `layout asm` | TUI panes for registers / disassembly |
+| Command                      | What it does                                          |
+| ---------------------------- | ----------------------------------------------------- |
+| `si` / `ni`                  | step **one instruction**; `ni` steps over `call`s     |
+| `s` / `n`                    | step by **source line** (works with `-g`)             |
+| `info registers`             | all general-purpose registers                         |
+| `p/x $reg`                   | print one register in hex (`/d` decimal, `/t` binary) |
+| `x/<n><fmt> addr`            | examine memory — e.g. `x/8gx $rsp` (8 giant hex)      |
+| `disas` / `disas fizzbuzz`   | disassemble current frame / a function                |
+| `bt`                         | backtrace                                             |
+| `layout regs` / `layout asm` | TUI panes for registers / disassembly                 |
 
 ## Debugging the four common bugs
 
@@ -80,7 +88,7 @@ Set a breakpoint at function entry and inspect the ABI register
 (gdb) p/d $rdi        # System V: 1st int arg. Should print 20.
 ```
 
-On Windows builds it's `$rcx`. If the value is garbage, the *caller*
+On Windows builds it's `$rcx`. If the value is garbage, the _caller_
 put the argument in the wrong place — check the call site, not the
 callee.
 
@@ -99,8 +107,8 @@ and compare:
 ```
 
 If `rbx`, `r12`–`r15`, `rbp`, or `rsp` change across a `call`, the
-callee violated the ABI (or *you* did, if you wrote it). Caller-saved
-registers (`rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`–`r11`) are *expected*
+callee violated the ABI (or _you_ did, if you wrote it). Caller-saved
+registers (`rax`, `rcx`, `rdx`, `rsi`, `rdi`, `r8`–`r11`) are _expected_
 to change — don't hold values in them across a `call`.
 
 ### 3. Misaligned stack at `call`
@@ -116,7 +124,7 @@ the `call` pushes the return address. Check it:
 ```
 
 If it's `0`, you're missing an 8-byte pad (or have one too many
-`push`es); the segfault will appear *inside* `printf` on the first SSE
+`push`es); the segfault will appear _inside_ `printf` on the first SSE
 instruction it executes.
 
 ### 4. Bad memory reference
